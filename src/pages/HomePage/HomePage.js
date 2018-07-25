@@ -3,8 +3,8 @@ import {container, title} from './HomePage.less';
 import ReactEcharts from 'echarts-for-react';
 import {Button, Collapse, Form, Icon, Input, Col} from 'antd';
 import 'antd/dist/antd.css';
-
-
+import asyncComponent from './AsyncComponent'
+const RadarReact = asyncComponent(() => import('../../components/RadarReact.js'));
 const Panel = Collapse.Panel;
 const FormItem = Form.Item;
 const InputGroup = Input.Group;
@@ -36,10 +36,6 @@ class HomePage extends Component {
     ]
   };
 
-  callback = () => {
-
-  };
-
   handleTitleChange = (e) => {
     e.preventDefault();
     this.props.form.validateFields((error, values) => {
@@ -56,7 +52,21 @@ class HomePage extends Component {
     e.preventDefault();
     this.props.form.validateFields((error, values) => {
       if (!error) {
-        console.log('values', values);
+
+        let attr = [];
+        let max = [];
+        for (let [key, value] of Object.entries(values)) {
+          if (key.startsWith('attr')) {
+            attr.push([key, value])
+          }
+
+          if (key.startsWith('max_')) {
+            max.push([key, value])
+          }
+        }
+        console.log('attr', attr);
+        console.log('max', max);
+
       } else {
         console.log('error', error, values);
       }
@@ -78,6 +88,11 @@ class HomePage extends Component {
 
     // 更新 option
     this.setState({attrs, data});
+  };
+
+  deleteData = (group_id) => {
+    let data = this.state.data;
+    data.splice(group_id, 1);
   };
 
   getAttrsItems = () => {
@@ -119,7 +134,32 @@ class HomePage extends Component {
     return items
   };
 
+  getDataItems = () => {
+    const datas = this.state.data;
+    const {getFieldDecorator} = this.props.form;
+    let items = [];
+    for (let i=0; i<datas.length;i++) {
+      let data = datas[i];
+      items.push(
+        <InputGroup key={"data_" + i} compact style={{marginBottom: '10px'}}>
+          <Input style={{width: '10%'}} defaultValue={data.name}/>
+          <Input style={{width: '40%'}} defaultValue={data.value}/>
+          <Button type="danger" onClick={() => {this.deleteData(i)}}>删除</Button>
+        </InputGroup>
+      )
+    }
 
+    return items
+  };
+
+  add = () => {
+    let attrs = this.state.attrs;
+    attrs.push({
+      text: '新属性',
+      max: 100
+    });
+    this.setState({attrs});
+  };
 
   getOption = () => {
 
@@ -173,7 +213,6 @@ class HomePage extends Component {
     return option;
   };
 
-
   render() {
 
     const { getFieldDecorator } = this.props.form;
@@ -209,27 +248,37 @@ class HomePage extends Component {
           <Panel header="配置：图表" key="2">
             <Form onSubmit={this.handleChartConfig}>
               {this.getAttrsItems()}
+              <InputGroup key="group_0">
+                <Col span={7}>
+                  <FormItem>
+                    <Button type="dashed" onClick={this.add} style={{width: '100%'}}>
+                    <Icon type="plus" /> 添加属性
+                  </Button>
+                  </FormItem>
+                </Col>
+                <Col span={7}>
+                  <FormItem>
+                    <Button type="primary" htmlType="submit" style={{width: '100%'}}>更新</Button>
+                  </FormItem>
+                </Col>
+              </InputGroup>
+              <br />
+            </Form>
+            <br />
+          </Panel>
+          <Panel header="配置：数据" key="3">
+            <Form onSubmit={this.handleChartConfig}>
+              {this.getDataItems()}
               <FormItem>
                 <Button type="primary" htmlType="submit">更新</Button>
               </FormItem>
             </Form>
           </Panel>
-
         </Collapse>
 
         <br />
         <br />
-
-        <ReactEcharts
-          option={this.getOption()}
-          notMerge={true}
-          lazyUpdate={false}
-          style={{
-            width: '600px',
-            height: '400px',
-            margin: 'auto',
-          }}
-        />
+        <RadarReact option={this.getOption()} />
       </div>
     );
   }

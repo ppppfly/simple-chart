@@ -4,7 +4,6 @@
     "antd": "^3.7.1",
     "dva": "^2.1.0",
     "echarts": "^4.1.0",
-    "echarts-for-react": "^2.0.13",
     "react": "^16.2.0",
     "react-dom": "^16.2.0"
   },
