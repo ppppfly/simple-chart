@@ -2,6 +2,7 @@ import React, {Component} from 'react';
 import {container, title} from './HomePage.less';
 import ReactEcharts from 'echarts-for-react';
 import {Button, Collapse, Form, Icon, Input, Col} from 'antd';
+import DataEditForm from './DataEditForm';
 import 'antd/dist/antd.css';
 import asyncComponent from './AsyncComponent'
 const RadarReact = asyncComponent(() => import('../../components/RadarReact.js'));
@@ -33,7 +34,12 @@ class HomePage extends Component {
         value: [97, 32, 74, 95, 88, 92],
         name: '罗纳尔多'
       }
-    ]
+    ],
+    visible: false,
+    current: {
+      name: '舍普琴科',
+      value: [97, 42, 88, 94, 90, 86],
+    }
   };
 
   handleTitleChange = (e) => {
@@ -54,19 +60,26 @@ class HomePage extends Component {
       if (!error) {
 
         let attr = [];
-        let max = [];
+        let max = {};
         for (let [key, value] of Object.entries(values)) {
           if (key.startsWith('attr')) {
             attr.push([key, value])
           }
 
           if (key.startsWith('max_')) {
-            max.push([key, value])
+            max[key] = value;
           }
         }
         console.log('attr', attr);
         console.log('max', max);
 
+        let attrs = [];
+        for (let [key, value] of attr) {
+          let i = key.replace('attr_', '');
+          let max_value = parseInt(max[`max_${i}`] || 100, 10);
+          attrs.push({text: value, max: max_value});
+        }
+        this.setState({attrs})
       } else {
         console.log('error', error, values);
       }
@@ -93,6 +106,8 @@ class HomePage extends Component {
   deleteData = (group_id) => {
     let data = this.state.data;
     data.splice(group_id, 1);
+
+    this.setState({data})
   };
 
   getAttrsItems = () => {
@@ -134,9 +149,16 @@ class HomePage extends Component {
     return items
   };
 
+  showModal = (data) => {
+    this.setState({ visible: true, current:data});
+  };
+
+  handleCancel = () => {
+    this.setState({ visible: false });
+  };
+
   getDataItems = () => {
     const datas = this.state.data;
-    const {getFieldDecorator} = this.props.form;
     let items = [];
     for (let i=0; i<datas.length;i++) {
       let data = datas[i];
@@ -144,7 +166,9 @@ class HomePage extends Component {
         <InputGroup key={"data_" + i} compact style={{marginBottom: '10px'}}>
           <Input style={{width: '10%'}} defaultValue={data.name}/>
           <Input style={{width: '40%'}} defaultValue={data.value}/>
-          <Button type="danger" onClick={() => {this.deleteData(i)}}>删除</Button>
+          <Button type="primary" icon="edit" onClick={()=>{this.showModal(data)}}>编辑</Button>
+          <Button type="danger" icon="delete"
+                  onClick={() => {this.deleteData(i)}}>删除</Button>
         </InputGroup>
       )
     }
@@ -154,11 +178,18 @@ class HomePage extends Component {
 
   add = () => {
     let attrs = this.state.attrs;
+    let data = this.state.data;
+
     attrs.push({
       text: '新属性',
       max: 100
     });
-    this.setState({attrs});
+
+    for (let _data of data) {
+      _data['value'].push(50)
+    }
+
+    this.setState({attrs, data});
   };
 
   getOption = () => {
@@ -267,15 +298,17 @@ class HomePage extends Component {
             <br />
           </Panel>
           <Panel header="配置：数据" key="3">
-            <Form onSubmit={this.handleChartConfig}>
-              {this.getDataItems()}
-              <FormItem>
-                <Button type="primary" htmlType="submit">更新</Button>
-              </FormItem>
-            </Form>
+            {this.getDataItems()}
           </Panel>
         </Collapse>
 
+        <DataEditForm
+          visible={this.state.visible}
+          onCancel={this.handleCancel}
+          onCreate={this.handleCreate}
+          current={this.state.current}
+          attrs={this.state.attrs}
+        />
         <br />
         <br />
         <RadarReact option={this.getOption()} />
