@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {container, title} from './HomePage.less';
 import ReactEcharts from 'echarts-for-react';
-import {Button, Collapse, Form, Icon, Input, Col} from 'antd';
+import {Button, Collapse, Form, Icon, Input, Col, List, Row} from 'antd';
 import DataEditForm from './DataEditForm';
 import 'antd/dist/antd.css';
 import asyncComponent from './AsyncComponent'
@@ -11,6 +11,12 @@ const FormItem = Form.Item;
 const InputGroup = Input.Group;
 
 class HomePage extends Component {
+
+  constructor(props) {
+    super(props);
+    this.state.isMobile = window.innerWidth <= 500;
+    this.state.current = this.state.data[0];
+  }
 
   state = {
     title: {
@@ -27,19 +33,16 @@ class HomePage extends Component {
     ],
     data: [
       {
-        value: [97, 42, 88, 94, 90, 86],
-        name: '舍普琴科'
-      },
-      {
-        value: [97, 32, 74, 95, 88, 92],
-        name: '罗纳尔多'
+        value: [90, 99, 93, 94, 95, 97],
+        name: '神之业'
       }
     ],
     visible: false,
     current: {
       name: '舍普琴科',
       value: [97, 42, 88, 94, 90, 86],
-    }
+    },
+    isMobile: false,
   };
 
   handleTitleChange = (e) => {
@@ -70,8 +73,6 @@ class HomePage extends Component {
             max[key] = value;
           }
         }
-        console.log('attr', attr);
-        console.log('max', max);
 
         let attrs = [];
         for (let [key, value] of attr) {
@@ -103,13 +104,6 @@ class HomePage extends Component {
     this.setState({attrs, data});
   };
 
-  deleteData = (group_id) => {
-    let data = this.state.data;
-    data.splice(group_id, 1);
-
-    this.setState({data})
-  };
-
   getAttrsItems = () => {
     const indicators = this.state.attrs;
     const {getFieldDecorator} = this.props.form;
@@ -118,29 +112,31 @@ class HomePage extends Component {
       let attr = indicators[i];
       items.push(
         <InputGroup key={"group_" + i}>
-          <Col span={6}>
+          <Col xs={10} sm={11}>
             <FormItem>
               {getFieldDecorator('attr_' + i, {
                 initialValue: attr.text,
                 rules: [{required: true}],
               })(
-                <Input addonBefore="属性名" prefix={<Icon type="user" style={{color: 'rgba(0,0,0,.25)'}}/>} placeholder="属性"/>
+                <Input addonBefore="属性名" placeholder="属性"/>
               )}
             </FormItem>
           </Col>
-          <Col span={6}>
+          <Col xs={10} sm={11}>
             <FormItem>
               {getFieldDecorator('max_' + i, {
                 initialValue: attr.max,
                 rules: [{required: true}],
               })(
-                <Input addonBefore="最大值" prefix={<Icon type="user" style={{color: 'rgba(0,0,0,.25)'}}/>} placeholder="最大值"/>
+                <Input addonBefore="最大值" placeholder="最大值"/>
               )}
             </FormItem>
           </Col>
-          <Col span={2}>
-            <Button type="danger" style={{marginTop: '4px'}}
-                    onClick={() => {this.deleteAttr(i)}}>删除</Button>
+          <Col xs={4} sm={2}>
+            <Button type="danger" style={{marginTop: '4px'}} icon="delete"
+                    onClick={() => {this.deleteAttr(i)}}>
+              {this.state.isMobile ? '' : '删除'}
+            </Button>
           </Col>
         </InputGroup>
       )
@@ -157,23 +153,8 @@ class HomePage extends Component {
     this.setState({ visible: false });
   };
 
-  getDataItems = () => {
-    const datas = this.state.data;
-    let items = [];
-    for (let i=0; i<datas.length;i++) {
-      let data = datas[i];
-      items.push(
-        <InputGroup key={"data_" + i} compact style={{marginBottom: '10px'}}>
-          <Input style={{width: '10%'}} defaultValue={data.name}/>
-          <Input style={{width: '40%'}} defaultValue={data.value}/>
-          <Button type="primary" icon="edit" onClick={()=>{this.showModal(data)}}>编辑</Button>
-          <Button type="danger" icon="delete"
-                  onClick={() => {this.deleteData(i)}}>删除</Button>
-        </InputGroup>
-      )
-    }
-
-    return items
+  handleCreate = (_data) => {
+    this.setState({data: [_data], visible: false})
   };
 
   add = () => {
@@ -227,7 +208,7 @@ class HomePage extends Component {
       ],
       series: [
         {
-          name: '完全实况球员数据',
+          name: this.state.title.text,
           type: 'radar',
           itemStyle: {
             normal: {
@@ -239,9 +220,39 @@ class HomePage extends Component {
           data: this.state.data
         }
       ]
-    }
-    console.log('option', option);
+    };
     return option;
+  };
+
+  renderItem = (item, ...args) => {
+    const {name, value} = item;
+    let descriptions = [(
+      <Row style={{fontSize: 'border'}} key={0}>
+        <Col span={8}/>
+        <Col span={8}>当前值</Col>
+        <Col span={8}>最大值</Col>
+      </Row>
+    )];
+    let i = 0;
+    for (let {text, max} of this.state.attrs) {
+      descriptions.push(
+        <Row key={i+1}>
+          <Col span={8}>{text}</Col>
+          <Col span={8}>{value[i]}</Col>
+          <Col span={8}>{max}</Col>
+        </Row>
+      );
+      i++;
+    }
+
+    return (
+      <List.Item actions={[<Button type="primary" onClick={()=>{this.showModal(item)}}>编辑</Button>]}>
+        <List.Item.Meta
+          title={name}
+          description={<div style={{textAlign: 'center'}}>{descriptions}</div>}
+        />
+      </List.Item>
+    )
   };
 
   render() {
@@ -252,7 +263,7 @@ class HomePage extends Component {
       <div className={container}>
         <div className={title}>漫步人生小工具 * 雷达图</div>
 
-        <Collapse onChange={this.callback}>
+        <Collapse onChange={this.callback} defaultActiveKey="3">
           <Panel header="配置：标题" key="1">
             <Form onSubmit={this.handleTitleChange}>
               <FormItem>
@@ -280,14 +291,14 @@ class HomePage extends Component {
             <Form onSubmit={this.handleChartConfig}>
               {this.getAttrsItems()}
               <InputGroup key="group_0">
-                <Col span={7}>
+                <Col span={12}>
                   <FormItem>
                     <Button type="dashed" onClick={this.add} style={{width: '100%'}}>
                     <Icon type="plus" /> 添加属性
                   </Button>
                   </FormItem>
                 </Col>
-                <Col span={7}>
+                <Col span={12}>
                   <FormItem>
                     <Button type="primary" htmlType="submit" style={{width: '100%'}}>更新</Button>
                   </FormItem>
@@ -298,14 +309,19 @@ class HomePage extends Component {
             <br />
           </Panel>
           <Panel header="配置：数据" key="3">
-            {this.getDataItems()}
+            <List
+              className="demo-loadmore-list"
+              itemLayout="horizontal"
+              dataSource={this.state.data}
+              renderItem={this.renderItem}
+            />
           </Panel>
         </Collapse>
 
         <DataEditForm
           visible={this.state.visible}
           onCancel={this.handleCancel}
-          onCreate={this.handleCreate}
+          onCreate={this.handleCreate.bind(this)}
           current={this.state.current}
           attrs={this.state.attrs}
         />
